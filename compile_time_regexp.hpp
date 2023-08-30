@@ -1,5 +1,6 @@
 // Copyright (c) Chao Wang, hit9@icloud.com, 2023.
 // Compile time regular expression engine.
+// vim: foldmethod=marker foldenable
 
 #ifndef __COMPILETIME_REGEXP_H__
 #define __COMPILETIME_REGEXP_H__
@@ -20,7 +21,7 @@
 namespace ctre {
 namespace _ {
 
-// Compile time hash functions.
+// Hash - Compile time hash functions. {{{
 
 // FNV32 implementation.
 constexpr uint32_t fnv32(const char *s, std::size_t n) {
@@ -69,8 +70,9 @@ struct hash<std::vector<uint32_t>> {
     return h;
   };
 };
+// hash functions. }}}
 
-// Compile time stack based on std::vector.
+// Stack -- compile time stack. {{{
 template <typename T>
 class stack {
  private:
@@ -93,8 +95,10 @@ class stack {
     return v;
   }
 };
+// stack. }}}
 
-// Compile time unordered map (open addressing).
+// Map - Compile time unordered map. {{{
+// Open addressing based.
 // K is the type of key.
 // V is the type of value.
 // H is the hasher class.
@@ -293,8 +297,9 @@ class map {
     return iterator(end, end);
   }
 };
+// map }}}
 
-// Compile time set based on map.
+// Set - Compile time set based on map. {{{
 template <typename T, typename H = hash<T>>
 class set {
  private:
@@ -340,8 +345,9 @@ class set {
   constexpr iterator begin() const { return iterator(m.begin()); }
   constexpr iterator end() const { return iterator(m.end()); }
 };
+// set }}}
 
-// A compile-time unique queue based on set.
+// Queue - A compile-time unique queue based on set. {{{
 template <typename T, typename H = hash<T>>
 class unique_queue {
  private:
@@ -397,8 +403,9 @@ class unique_queue {
     return head->next->v;
   }
 };
+// queue }}}
 
-// Fixed size string.
+// Fixed size string. {{{
 template <std::size_t N>
 class fixed_string {
  public:
@@ -407,7 +414,9 @@ class fixed_string {
   constexpr std::size_t size() const { return N; }
   constexpr char operator[](int x) const { return a[x]; }
 };
+// end fixed_string }}}
 
+// {{{ Helpers
 // Regexp character.
 using C = char;
 
@@ -502,8 +511,9 @@ constexpr static bool IsAbleInsertConcat(C c) {
       return true;
   }
 }
+// Helpers }}}
 
-// Base state class.
+// State - Base state class. {{{
 class State {
  protected:
   uint32_t id;  // starts from 1.
@@ -528,8 +538,9 @@ struct hash<State *> {
     return hash<uint32_t>{}(st->Id());
   };
 };
+// State }}}
 
-// NfaState
+// NfaParser - NfaState, Nfa & Parse Nfa from regular expression pattern. {{{
 class NfaState : public State {
  public:
   // Set of NfaStates pointers.
@@ -846,6 +857,10 @@ class NfaParser {
   }
 };
 
+// NfaParser }}}
+
+// DfaBuilder - DfaState, Dfa & Convert Nfa to Dfa. {{{
+
 // DfaState
 class DfaState : public State {
  public:
@@ -1051,6 +1066,10 @@ class DfaBuilder {
   };
 };
 
+// DfaBuilder }}}
+
+// Freezing - FixedDfa and match functions. {{{
+
 // Build a dfa from fixed_string pattern.
 // The returned dfa pointer should be finally freed.
 template <fixed_string pattern>
@@ -1194,7 +1213,11 @@ class FixedDfa {
     return Match(s1);
   }
 };
+
+// Freezing }}}
 }  // namespace _
+
+// Public API {{{
 
 // Compile time  to build a dfa from a regular expression pattern.
 // Example usage:
@@ -1255,6 +1278,8 @@ template <_::fixed_string pattern, bool pre_index = false,
 constexpr bool Match(std::string_view s) {
   return Compile<pattern>().Match(s);
 }
+
+// Public API }}}
 
 }  // namespace ctre
 #endif
