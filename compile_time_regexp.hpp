@@ -17,7 +17,7 @@
 #endif
 
 // Compile time regular expression engine.
-namespace ctregexp {
+namespace ctre {
 namespace _ {
 
 // Compile time hash functions.
@@ -1198,7 +1198,7 @@ class FixedDfa {
 
 // Compile a regular expression pattern to a fixed-size dfa at compile time.
 // Example usage:
-//  auto dfa = ctregexp::Compile<"(a|b)*ab">();
+//  auto dfa = ctre::Compile<"(a|b)*ab">();
 //  dfa.Match("ababab");
 // pre_index indicates whether to build a static character index ahead, this
 // makes matching faster but uses more spaces.
@@ -1211,7 +1211,7 @@ consteval _::FixedDfa<pattern, pre_index, AlphabetSize> Compile() {
 
 // Compile time match.
 // Example usage:
-//  ctregexp::Match<"(a|b)*ab", "ababab">()
+//  ctre::Match<"(a|b)*ab", "ababab">()
 template <_::fixed_string pattern, _::fixed_string s, bool pre_index = false,
           std::size_t AlphabetSize = _::DefaultAlphabetSize>
 consteval bool Match() {
@@ -1224,12 +1224,12 @@ consteval bool Match() {
 
 // Compile time dfa build, and runtime match.
 // Example usage:
-//  ctregexp::Match<"(a|b)*ab">("ababab")
+//  ctre::Match<"(a|b)*ab">("ababab")
 template <_::fixed_string pattern, bool pre_index = false,
           std::size_t AlphabetSize = _::DefaultAlphabetSize>
 constexpr bool Match(std::string_view s) {
   return Compile<pattern>().Match(s);
 }
 
-}  // namespace ctregexp
+}  // namespace ctre
 #endif
