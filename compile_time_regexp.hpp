@@ -1196,10 +1196,18 @@ class FixedDfa {
 };
 }  // namespace _
 
-// Compile a regular expression pattern to a fixed-size dfa at compile time.
+// Compile time  to build a dfa from a regular expression pattern.
 // Example usage:
+//
+//  // Compile time build.
 //  auto dfa = ctre::Compile<"(a|b)*ab">();
+//
+//  // Runtime matching.
 //  dfa.Match("ababab");
+//
+//  // Compile time matching.
+//  constexpr auto b = dfa.Match("ababab");
+//
 // pre_index indicates whether to build a static character index ahead, this
 // makes matching faster but uses more spaces.
 // AlphabetSize is the size of alphabet set to use.
@@ -1209,9 +1217,9 @@ consteval _::FixedDfa<pattern, pre_index, AlphabetSize> Compile() {
   return _::FixedDfa<pattern, pre_index, AlphabetSize>{};
 }
 
-// Compile time match.
+// Compile time DFA build and match.
 // Example usage:
-//  ctre::Match<"(a|b)*ab", "ababab">()
+//  ctre::Match<"(a|b)*ab", "ababab">();
 template <_::fixed_string pattern, _::fixed_string s, bool pre_index = false,
           std::size_t AlphabetSize = _::DefaultAlphabetSize>
 consteval bool Match() {
@@ -1222,9 +1230,26 @@ consteval bool Match() {
   return result;
 }
 
-// Compile time dfa build, and runtime match.
+// Match a given string s by regular expression pattern.
 // Example usage:
-//  ctre::Match<"(a|b)*ab">("ababab")
+//
+//  // Compile time DFA build and runtime matching.
+//  ctre::Match<"(a|b)*ab">("ababab");
+//
+//  // Compile time DFA build and matching.
+//  constexpr auto b = ctre::Match<"(a|b)*ab">("ababab");
+//
+//  // Compile time DFA build and runtime matching.
+//  std::string_view s("ababab");
+//  ctre::Match<"(a|b)*ab">(s);
+//
+//  // Compile time DFA build and matching.
+//  constexpr std::string_view s("ababab");
+//  constexpr auto b = ctre::Match<"(a|b)*ab">(s);
+//
+//  // Compile time DFA build and runtime matching.
+//  std::string s1;
+//  ctre::Match<"(a|b)*ab">(s1);
 template <_::fixed_string pattern, bool pre_index = false,
           std::size_t AlphabetSize = _::DefaultAlphabetSize>
 constexpr bool Match(std::string_view s) {
