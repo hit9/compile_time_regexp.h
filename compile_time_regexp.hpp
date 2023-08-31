@@ -345,6 +345,25 @@ class set {
   constexpr iterator begin() const { return iterator(m.begin()); }
   constexpr iterator end() const { return iterator(m.end()); }
 };
+
+template <typename T>
+struct hash<set<T>> {
+  constexpr uint32_t operator()(const set<T> &s) const {
+    // sort
+    std::vector<T> vs;
+    for (auto v : s) vs.push_back(v);
+    std::sort(vs.begin(), vs.end());
+
+    // hash
+    uint32_t h = 0x811c9dc5;
+    for (auto i = 0; i < vs.size(); i++) {
+      h *= 16777619;
+      h ^= vs[i];
+    }
+    return h;
+  };
+};
+
 // set }}}
 
 // Queue - A compile-time unique queue based on set. {{{
@@ -564,6 +583,18 @@ class NfaState : public State {
 
  private:
   Table transitions;
+};
+
+template <>
+struct hash<NfaState::PtrSet> {
+  constexpr uint32_t operator()(NfaState::PtrSet &s) const {
+    set<uint32_t> s1;
+    // Note that reinterpret_cast is not allowed in constexpr context.
+    // We have to run a copy here.
+    // And it's no need to implement a hash<set<State*>>.
+    for (auto &p : s) s1.add(p->Id());
+    return hash<decltype(s1)>{}(s1);
+  };
 };
 
 class Nfa {
@@ -865,7 +896,7 @@ class NfaParser {
 class DfaState : public State {
  public:
   // Set of NfaStates.
-  using Set = set<DfaState *, hash<State *>>;
+  using PtrSet = set<DfaState *, hash<State *>>;
 
   // Transition table.
   using Table = map<C, DfaState *>;
@@ -913,6 +944,15 @@ class Dfa {
   }
 };
 
+template <>
+struct hash<DfaState::PtrSet> {
+  constexpr uint32_t operator()(const DfaState::PtrSet &s) const {
+    set<uint32_t> s1;
+    for (auto &p : s) s1.add(p->Id());
+    return hash<decltype(s1)>{}(s1);
+  };
+};
+
 // DfaBuilder builds a dfa from nfa.
 class DfaBuilder {
  private:
@@ -931,12 +971,7 @@ class DfaBuilder {
 
   // Generates dfa state id from a given set of nfa states.
   constexpr uint32_t HashNfaStateIds(NfaState::PtrSet &N) {
-    // Sorts nfa state's ids.
-    std::vector<uint32_t> ids;
-    for (auto &st : N) ids.push_back(st->Id());
-    std::sort(ids.begin(), ids.end());
-    // Makes a hash.
-    return hash<std::vector<uint32_t>>{}(ids);
+    return hash<NfaState::PtrSet>{}(N);
   }
 
   // Creates a new dfa state from a given set of nfa states.
@@ -1068,19 +1103,98 @@ class DfaBuilder {
 
 // DfaBuilder }}}
 
+// DfaMinifier -- Minify Dfa states count. {{{
+
+class DfaMinifier {
+ private:
+  // Group of dfa states.
+  struct Group {
+    DfaState::PtrSet s;
+    uint32_t id;
+
+    constexpr Group(const DfaState::PtrSet &s)
+        : s(s), id(hash<DfaState::PtrSet>{}(s)){};
+    bool operator==(const Group &o) const { return o.id == id; }
+    bool operator!=(const Group &o) const { return o.id != id; }
+  };
+  // Group of groups.
+  using GroupSet = set<Group>;
+
+  // Dfa to minify.
+  Dfa *dfa;
+
+  // Tracks a DfaState's group.
+  // DfaState Id => Group
+  map<uint32_t, Group *> d;
+
+  constexpr void RemoveStates(DfaState::PtrSet &removings) {
+    for (auto st : removings) {
+      dfa->states.pop(st);
+      delete st;
+    };
+  }
+
+  // Remove dead states: those non-end and having no out transitions states.
+  constexpr void RemoveDeadStates() {
+    DfaState::PtrSet deads;
+    for (auto st : dfa->states)
+      if (!st->IsEnd() && st->Transitions().empty()) deads.add(st);
+    // Pop and free.
+    RemoveStates(deads);
+  }
+
+  // Clean unreachable states (dfs).
+  constexpr void RemoveUnreachableStates() {
+    DfaState::PtrSet reachable{dfa->start};
+
+    stack<DfaState *> stack;
+    stack.push(dfa->start);
+
+    while (!stack.empty()) {
+      auto st = stack.pop();
+      for (auto p : st->Transitions()) {
+        auto &to = std::get<1>(p);  // reachable target.
+        if (!reachable.has(to)) {
+          // Add to stack if hasn't seen before.
+          stack.push(to);
+          reachable.add(to);
+        }
+      }
+    }
+
+    // Pop and free unreachables.
+    DfaState::PtrSet removings;
+    for (auto st : dfa->states)
+      if (!reachable.has(st)) removings.add(st);
+    RemoveStates(removings);
+  }
+
+ public:
+  constexpr DfaMinifier(Dfa *dfa) : dfa(dfa){};
+  // Minify the dfa via Hopcroft algorithm.
+  constexpr void Minify() {
+    RemoveUnreachableStates();
+    RemoveDeadStates();
+    // TODO
+  }
+};
+
+// DfaMinifier }}}
+
 // Freezing - FixedDfa and match functions. {{{
 
 // Build a dfa from fixed_string pattern.
 // The returned dfa pointer should be finally freed.
-template <fixed_string pattern>
-constexpr Dfa *build() {
+constexpr Dfa *build(std::string_view pattern, bool minify = true) {
   // Parsing to NFA.
-  std::string_view s(pattern.a);
+  std::string_view s(pattern);
   NfaParser parser;
   auto nfa = parser.Parse(s);
   // Build a DFA.
   DfaBuilder builder(nfa);
   auto dfa = builder.Build();
+  // Minify dfa.
+  if (minify) DfaMinifier(dfa).Minify();
   return dfa;
 }
 
@@ -1090,7 +1204,7 @@ constexpr Dfa *build() {
 // Returns count of dfa states, count of acceptable chars.
 template <fixed_string pattern>
 constexpr std::tuple<std::size_t, std::size_t> dfa_count() {
-  auto dfa = build<pattern>();
+  auto dfa = build(pattern.a);
   auto c = std::make_tuple(dfa->Size(), dfa->chs.size());
   delete dfa;
   return c;
@@ -1133,7 +1247,7 @@ class FixedDfa {
 
  public:
   constexpr FixedDfa() {
-    auto dfa = build<pattern>();
+    auto dfa = build(pattern.a);
 
     std::array<uint8_t, AlphabetSize> tmp;  // index table
 
@@ -1229,6 +1343,7 @@ class FixedDfa {
 //  dfa.Match("ababab");
 //
 //  // Compile time matching.
+//  constexpr auto dfa = ctre::Compile<"(a|b)*ab">();
 //  constexpr auto b = dfa.Match("ababab");
 //
 // pre_index indicates whether to build a static character index ahead, this
@@ -1246,7 +1361,7 @@ consteval _::FixedDfa<pattern, pre_index, AlphabetSize> Compile() {
 template <_::fixed_string pattern, _::fixed_string s, bool pre_index = false,
           std::size_t AlphabetSize = _::DefaultAlphabetSize>
 consteval bool Match() {
-  auto dfa = _::build<pattern>();
+  auto dfa = _::build(pattern.a);
   std::string_view s1(s.a);
   auto result = dfa->Match(s1);
   delete dfa;
@@ -1277,6 +1392,21 @@ template <_::fixed_string pattern, bool pre_index = false,
           std::size_t AlphabetSize = _::DefaultAlphabetSize>
 constexpr bool Match(std::string_view s) {
   return Compile<pattern>().Match(s);
+}
+
+// Match a given string s by regular expression pattern.
+// Example usage:
+//
+//  // Runtime DFA build and runtime matching.
+//  ctre::Match("(a|b)*ab", "ababab")
+//
+//  // Compile time DFA build and compile time matching.
+//  constexpr auto b = ctre::Match("(a|b)*ab", "ababab")
+constexpr bool Match(std::string_view pattern, std::string_view s) {
+  auto dfa = _::build(pattern);
+  auto b = dfa->Match(s);
+  delete dfa;
+  return b;
 }
 
 // Public API }}}
