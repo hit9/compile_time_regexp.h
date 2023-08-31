@@ -128,7 +128,7 @@ class map {
 
   // Resize capacity.
   constexpr void resize() {
-    auto new_cap = std::max<std::size_t>(cap * 2, 1);
+    auto new_cap = std::max<std::size_t>(cap * 2, 7);
     auto ob = b;
     b = new slot[new_cap]{};
     for (auto i = 0; i < cap; i++) {
@@ -265,7 +265,7 @@ class map {
 
    public:
     constexpr iterator(){};
-    constexpr iterator(slot *p, slot *end) : p(p), end(end) {
+    constexpr iterator(slot *q, slot *e) : p(q), end(e) {
       // Seeks to the first used slot.
       while (p != nullptr && p != end && !p->used) p++;
     }
@@ -286,13 +286,13 @@ class map {
 
   // Returns the iterator at begin.
   constexpr iterator begin() const {
-    if (!cap) return iterator();
+    if (!n) return iterator();
     return iterator(b, b + cap);
   }
 
   // Returns the iterator at end.
   constexpr iterator end() const {
-    if (!cap) return iterator();
+    if (!n) return iterator();
     auto end = b + cap;
     return iterator(end, end);
   }
@@ -890,7 +890,7 @@ class Dfa {
   set<DfaState *, hash<State *>> states;
   set<C> chs;  // Acceptable characters.
   constexpr Dfa(DfaState *start) : start(start){};
-  constexpr ~Dfa() {
+  constexpr ~Dfa() noexcept {
     for (auto st : states) delete st;
   }
   // Does this dfa contain given state s?
