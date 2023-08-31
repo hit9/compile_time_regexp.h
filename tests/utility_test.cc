@@ -90,7 +90,34 @@ TEST_CASE("map", "[map compiltime test #4]") {
   REQUIRE(f() == true);
 }
 
-TEST_CASE("set", "[test compiltime test #1]") {
+TEST_CASE("map", "[map compiltime swap]") {
+  auto f = []() constexpr {
+    ctre::_::map<int, int> m1;
+    m1[1] = 2;
+    m1[2] = 4;
+    m1[3] = 6;
+
+    ctre::_::map<int, int> m2;
+    m2[1] = 1;
+    m2[2] = 3;
+    m2[3] = 5;
+
+    m1.swap(m2);
+
+    if (m1[1] != 1) return false;
+    if (m1[2] != 3) return false;
+    if (m1[3] != 5) return false;
+
+    if (m2[1] != 2) return false;
+    if (m2[2] != 4) return false;
+    if (m2[3] != 6) return false;
+
+    return true;
+  };
+  REQUIRE(f());
+}
+
+TEST_CASE("set", "[set compiltime test #1]") {
   auto f = []() constexpr {
     ctre::_::set<int> a;
     ctre::_::set<int> b{1};
@@ -99,6 +126,25 @@ TEST_CASE("set", "[test compiltime test #1]") {
 
     for (auto i = 10; i < 20; i++) a.add(i);
     if (std::accumulate(a.begin(), a.end(), 0) != 145 + 1) return false;
+    return true;
+  };
+  REQUIRE(f() == true);
+}
+
+TEST_CASE("set", "[set compiltime swap]") {
+  auto f = []() constexpr {
+    ctre::_::set<int> a{1, 2, 3};
+    ctre::_::set<int> b{4, 5, 6};
+
+    a.swap(b);
+
+    if (!a.has(4)) return false;
+    if (!a.has(5)) return false;
+    if (!a.has(6)) return false;
+    if (a.has(1)) return false;
+    if (a.has(2)) return false;
+    if (a.has(3)) return false;
+
     return true;
   };
   REQUIRE(f() == true);

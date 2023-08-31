@@ -5,7 +5,7 @@
 #ifndef __COMPILETIME_REGEXP_H__
 #define __COMPILETIME_REGEXP_H__
 
-#include <algorithm>         // for std::copy_n, std::fill, std::sort, std::max
+#include <algorithm>  // for std::copy_n, std::fill, std::sort, std::max, std::swap
 #include <cstdlib>           // for std::size_t
 #include <initializer_list>  // for std::initializer_list
 #include <string>            // for std::string
@@ -166,6 +166,11 @@ class map {
         std::copy_n(o.b, cap, b);
       }
     }
+  }
+  constexpr void swap(map &o) {
+    std::swap(b, o.b);
+    std::swap(n, o.n);
+    std::swap(cap, o.cap);
   }
 
   constexpr map &operator=(const map &o) {
@@ -328,6 +333,7 @@ class set {
   constexpr void merge(const set &o) {
     for (auto &v : o) add(v);
   }
+  constexpr void swap(set &o) { m.swap(o.m); }
 
   class iterator {
    private:
@@ -1108,12 +1114,20 @@ class DfaBuilder {
 class DfaMinifier {
  private:
   // Group of dfa states.
-  struct Group {
+  class Group {
+   private:
     DfaState::PtrSet s;
     uint32_t id;
 
-    constexpr Group(const DfaState::PtrSet &s)
+   public:
+    constexpr Group(const DfaState::PtrSet &s)  // copy
         : s(s), id(hash<DfaState::PtrSet>{}(s)){};
+    constexpr Group(DfaState::PtrSet &&s1) {  // move
+      s.swap(s1);
+      id = hash<DfaState::PtrSet>{}(s);
+    };
+    constexpr uint32_t Id() { return id; }
+    constexpr DfaState::PtrSet &Set() { return s; }
     bool operator==(const Group &o) const { return o.id == id; }
     bool operator!=(const Group &o) const { return o.id != id; }
   };
@@ -1167,6 +1181,13 @@ class DfaMinifier {
     for (auto st : dfa->states)
       if (!reachable.has(st)) removings.add(st);
     RemoveStates(removings);
+  }
+
+  // Creates a new group (supports perfect forward)..
+  constexpr Group *NewGroup(DfaState::PtrSet &&s) {
+    auto g = new Group(std::forward<DfaState::PtrSet>(s));
+    for (auto &st : g->Set()) d[st->Id()] = g;
+    return g;
   }
 
  public:
