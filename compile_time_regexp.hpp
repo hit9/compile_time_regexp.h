@@ -119,10 +119,10 @@ class map {
   std::size_t n = 0;
 
   // Hasher.
-  constexpr static auto h = H{};
+  static constexpr auto h = H{};
 
   // Returns the position via haser h.
-  constexpr static std::size_t mod(const K &k, std::size_t i, std::size_t cap) {
+  static constexpr std::size_t mod(const K &k, std::size_t i, std::size_t cap) {
     return (h(k) + i) % cap;
   }
 
@@ -1097,7 +1097,7 @@ constexpr std::tuple<std::size_t, std::size_t> dfa_count() {
 }
 
 // 128 is the printable ASCII characters size.
-constexpr static std::size_t DefaultAlphabetSize = 128;
+static constexpr std::size_t DefaultAlphabetSize = 128;
 
 // Compiled dfa in format of fixed-size arrays.
 // Check function Compile for more documentation.
