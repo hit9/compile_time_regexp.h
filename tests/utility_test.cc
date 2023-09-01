@@ -158,7 +158,7 @@ TEST_CASE("set", "[set sub]") {
     a.sub(b, c);
 
     if (c.size() != 4) return false;
-    if (c != ctre::_::set<int>({2,3,4,6})) return false;
+    if (c != ctre::_::set<int>({2, 3, 4, 6})) return false;
     return true;
   };
   REQUIRE(f() == true);

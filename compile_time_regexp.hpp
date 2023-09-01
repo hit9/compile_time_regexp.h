@@ -1323,15 +1323,23 @@ class DfaMinifier {
   constexpr void RewriteDfa() {
     // Mappings group => new dfa state.
     map<DfaStateGroup *, DfaState *> m;
-
     // Sets of new states, will eventually swap into dfa.
     auto new_states = new DfaState::PtrSet;
+    // Group of start state.
+    auto g0 = GroupOf(dfa->start);
+    // The start state.
+    auto start = new DfaState(g0->Id(), g0->HasEndState(), 1);
+    new_states->add(start);
+    m[g0] = start;
 
-    // Creates new states.
+    // Creates other new states.
     for (auto g : gs) {
-      auto st = new DfaState(g->Id(), g->HasEndState(), new_states->size() + 1);
-      new_states->add(st);
-      m[g] = st;
+      if (g != g0) {
+        auto st =
+            new DfaState(g->Id(), g->HasEndState(), new_states->size() + 1);
+        new_states->add(st);
+        m[g] = st;
+      }
     }
 
     // Maintain the transitions.
@@ -1348,7 +1356,7 @@ class DfaMinifier {
     }
 
     // The group of start state is the new start state.
-    dfa->start = m[GroupOf(dfa->start)];
+    dfa->start = start;
     dfa->states.swap(*new_states);
 
     // Free old dfa states (which has been swapped into new_states).
@@ -1513,6 +1521,7 @@ class FixedDfa {
 
     // Matching.
     auto fail = false;
+    // The start state should starts no from 1.
     uint16_t st = 1;
 
     for (auto ch : s) {
