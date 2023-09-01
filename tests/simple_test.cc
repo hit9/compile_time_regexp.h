@@ -73,3 +73,18 @@ TEST_CASE("Compile", "[Compile time build and runtime match #4]") {
   REQUIRE(d.Match("122."));
   REQUIRE(!d.Match("1.1.1"));
 }
+
+TEST_CASE("Minify", "[Minify simple #1]") {
+  constexpr auto d =
+      ctre::Compile<"((\\+|\\-)[0-9])?[0-9]*(([0-9].)|(.[0-9]))?[0-9]*">();
+  REQUIRE(d.Size() == 6);
+}
+
+TEST_CASE("Minify", "[Minify simple #2]") {
+  constexpr auto d = ctre::Compile<"(a|b)*ab">();
+  REQUIRE(d.Size() == 3);
+}
+TEST_CASE("Minify", "[Minify simple #3]") {
+  constexpr auto d = ctre::Compile<"a(a|b)*c(d|e)(x|y|z)*">();
+  REQUIRE(d.Size() == 4);
+}
