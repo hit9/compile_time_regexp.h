@@ -149,3 +149,17 @@ TEST_CASE("set", "[set compiltime swap]") {
   };
   REQUIRE(f() == true);
 }
+
+TEST_CASE("set", "[set sub]") {
+  auto f = []() constexpr {
+    ctre::_::set<int> a{1, 2, 3, 4, 5, 6};
+    ctre::_::set<int> b{5, 1, 7, 9};
+    ctre::_::set<int> c;
+    a.sub(b, c);
+
+    if (c.size() != 4) return false;
+    if (c != ctre::_::set<int>({2,3,4,6})) return false;
+    return true;
+  };
+  REQUIRE(f() == true);
+}

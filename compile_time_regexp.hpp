@@ -11,6 +11,7 @@
 #include <string>            // for std::string
 #include <string_view>       // for std::string_view
 #include <tuple>             // for std::tuple, std::tie
+#include <utility>           // for std::move
 #include <vector>            // for std::vector
 
 #ifdef DEBUG
@@ -334,6 +335,11 @@ class set {
     for (auto &v : o) add(v);
   }
   constexpr void swap(set &o) { m.swap(o.m); }
+  // Copy elements in *this but not in set o to given set others.
+  constexpr void sub(const set &o, set &others) const {
+    for (auto &v : *this)
+      if (!o.has(v)) others.add(v);
+  }
 
   class iterator {
    private:
@@ -924,7 +930,7 @@ class DfaState : public State {
 class Dfa {
  public:
   DfaState *start = nullptr;
-  set<DfaState *, hash<State *>> states;
+  DfaState::PtrSet states;
   set<C> chs;  // Acceptable characters.
   constexpr Dfa(DfaState *start) : start(start){};
   constexpr ~Dfa() noexcept {
@@ -1111,35 +1117,55 @@ class DfaBuilder {
 
 // DfaMinifier -- Minify Dfa states count. {{{
 
+// Group of dfa states.
+class DfaStateGroup {
+ private:
+  DfaState::PtrSet s;
+  uint32_t id;
+
+  constexpr void init() { id = hash<DfaState::PtrSet>{}(s); }
+
+ public:
+  constexpr DfaStateGroup(const DfaState::PtrSet &s)  // copy
+      : s(s) {
+    init();
+  };
+  constexpr DfaStateGroup(DfaState::PtrSet &&s1) {  // move
+    s.swap(s1);
+    init();
+  };
+  constexpr uint32_t Id() const { return id; }
+  constexpr DfaState::PtrSet &Set() { return s; }
+  constexpr bool operator==(const DfaStateGroup &o) const { return o.id == id; }
+  constexpr bool operator!=(const DfaStateGroup &o) const { return o.id != id; }
+  constexpr bool HasEndState() const {
+    for (auto &st : s)
+      if (st->IsEnd()) return true;
+    return false;
+  }
+};
+
+template <>
+struct hash<DfaStateGroup *> {
+  constexpr uint32_t operator()(const DfaStateGroup *s) const {
+    return hash<uint32_t>{}(s->Id());
+  }
+};
+
 class DfaMinifier {
  private:
-  // Group of dfa states.
-  class Group {
-   private:
-    DfaState::PtrSet s;
-    uint32_t id;
-
-   public:
-    constexpr Group(const DfaState::PtrSet &s)  // copy
-        : s(s), id(hash<DfaState::PtrSet>{}(s)){};
-    constexpr Group(DfaState::PtrSet &&s1) {  // move
-      s.swap(s1);
-      id = hash<DfaState::PtrSet>{}(s);
-    };
-    constexpr uint32_t Id() { return id; }
-    constexpr DfaState::PtrSet &Set() { return s; }
-    bool operator==(const Group &o) const { return o.id == id; }
-    bool operator!=(const Group &o) const { return o.id != id; }
-  };
   // Group of groups.
-  using GroupSet = set<Group>;
+  using GroupSet = set<DfaStateGroup *>;
 
   // Dfa to minify.
   Dfa *dfa;
 
+  // Set of Groups.
+  GroupSet gs;
+
   // Tracks a DfaState's group.
-  // DfaState Id => Group
-  map<uint32_t, Group *> d;
+  // DfaState Id => DfaStateGroup
+  map<uint32_t, DfaStateGroup *> d;
 
   constexpr void RemoveStates(DfaState::PtrSet &removings) {
     for (auto st : removings) {
@@ -1184,19 +1210,183 @@ class DfaMinifier {
   }
 
   // Creates a new group (supports perfect forward)..
-  constexpr Group *NewGroup(DfaState::PtrSet &&s) {
-    auto g = new Group(std::forward<DfaState::PtrSet>(s));
+  constexpr DfaStateGroup *NewGroup(DfaState::PtrSet &&s) {
+    auto g = new DfaStateGroup(std::forward<DfaState::PtrSet>(s));
     for (auto &st : g->Set()) d[st->Id()] = g;
     return g;
   }
 
+  // Query which group the given state belongs to.
+  // At any time, a dfa state will always belongs to a group.
+  constexpr DfaStateGroup *GroupOf(const DfaState *s) const {
+    return d.get(s->Id());
+  }
+
+  // Initial groupset inplace.
+  // All end states goes to one group, others goes to another.
+  constexpr void InitGroupSet() {
+    // Group of end states.
+    auto ends = new DfaState::PtrSet;
+    for (auto st : dfa->states)
+      if (st->IsEnd()) ends->add(st);
+    auto g1 = NewGroup(std::move(*ends));
+    delete ends;
+
+    // Others goes to a group.
+    auto others = new DfaState::PtrSet;
+    dfa->states.sub(g1->Set(), *others);
+    auto g2 = NewGroup(std::move(*others));
+    delete others;
+
+    gs.add(g1);
+    gs.add(g2);
+  }
+
+  // FindDistinguishable is the sub process of refine.
+  // Find all states b in given group g, where b is distinguishable from given
+  // state a. If there's nothing found, returns nullptr.
+  constexpr DfaStateGroup *FindDistinguishable(DfaStateGroup *g, DfaState *a) {
+    // x stores the distinguishable states.
+    auto x = new DfaState::PtrSet;
+
+    for (auto p : a->Transitions()) {
+      // for each out transition, consider its target state
+      auto [c, ta] = p;
+      for (auto b : g->Set()) {
+        // Check if b.id equals a.id
+        if (*b != *a) {
+          if (b->HasTransition(c)) {
+            // tb is the target state of b through transition character c.
+            auto tb = b->Next(c);
+            if (*GroupOf(ta) != *GroupOf(tb)) {
+              // The groups of states ta and tb are different.
+              x->add(b);
+            }
+          }
+        }
+      }
+
+      // Once we meet a character that could distinguish, just break.
+      if (!x->empty()) break;
+    }
+
+    // No distinguishable states are found.
+    if (x->empty()) {
+      delete x;
+      return nullptr;
+    }
+
+    // Returns a new group, it will eventually add to gs.
+    auto g2 = NewGroup(std::move(*x));
+    delete x;
+    return g2;
+  }
+
+  // Considers each group g of groupset gs.
+  // If there's a transition ch in g, there're two states a and b, the target
+  // states aren't in the same group. We think character ch distinguishes a and
+  // b, then we should split group g.
+  // Returns true if the split is done and false if not.
+  constexpr bool Refine() {
+    // Consider each group g.
+    for (auto g : gs) {
+      // Consider each state inside g.
+      for (auto a : g->Set()) {
+        // Find distinguishable states set for a.
+        auto g2 = FindDistinguishable(g, a);
+        if (g2 != nullptr) {
+          // split
+
+          // g1 is (g sub g2).
+          auto x = new DfaState::PtrSet;
+          g->Set().sub(g2->Set(), *x);
+          auto g1 = NewGroup(std::move(*x));
+          delete x;
+
+          // Add new groups, and remove old group.
+          gs.add(g1);
+          gs.add(g2);
+          gs.pop(g);
+          delete g;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // Finally constructs new DfaState set and transition tables, rewrite the
+  // original DFA.
+  constexpr void RewriteDfa() {
+    // Mappings group => new dfat state.
+    map<DfaStateGroup *, DfaState *> d;
+
+    // Sets of new states, will eventually swap into dfa.
+    auto new_states = new DfaState::PtrSet;
+
+    // Creates new states.
+    for (auto g : gs) {
+      auto st = new DfaState(g->Id(), g->HasEndState(), new_states->size() + 1);
+      new_states->add(st);
+      d[g] = st;
+    }
+
+    // Maintain the transitions.
+    for (auto g : gs) {
+      for (auto s : g->Set()) {
+        for (auto p : s->Transitions()) {
+          auto [c, t] = p;  // char, target state
+          // Group of the target state.
+          auto gt = GroupOf(t);
+          auto st = d[gt];
+          d[g]->AddTransition(c, st);
+        }
+      }
+    }
+
+    // The group of start state is the new start state.
+    dfa->start = d[GroupOf(dfa->start)];
+    dfa->states.swap(*new_states);
+
+    delete new_states;
+  }
+
+  constexpr void RewriteDfaChs() {
+    // Sets of acceptable characters.
+    auto chs = new set<C>;
+
+    for (auto st : dfa->states)
+      for (auto p : st->Transitions()) {
+        auto c = std::get<0>(p);
+        chs->add(c);
+      }
+
+    // Since we remove some states from dfa.
+    // The acceptable may finally change smaller.
+    dfa->chs.swap(*chs);
+    delete chs;
+  }
+
  public:
   constexpr DfaMinifier(Dfa *dfa) : dfa(dfa){};
+  constexpr ~DfaMinifier() noexcept {
+    for (auto g : gs) delete g;
+  }
   // Minify the dfa via Hopcroft algorithm.
   constexpr void Minify() {
+    auto original_size = dfa->Size();
+
     RemoveUnreachableStates();
     RemoveDeadStates();
-    // TODO
+
+    if (dfa->Size() > 1) {
+      InitGroupSet();
+      while (Refine())
+        ;
+      // RewriteDfa();
+    }
+
+    if (original_size != dfa->Size()) RewriteDfaChs();
   }
 };
 
@@ -1224,8 +1414,8 @@ constexpr Dfa *build(std::string_view pattern, bool minify = true) {
 // first, and then fill it.
 // Returns count of dfa states, count of acceptable chars.
 template <fixed_string pattern>
-constexpr std::tuple<std::size_t, std::size_t> dfa_count() {
-  auto dfa = build(pattern.a);
+constexpr std::tuple<std::size_t, std::size_t> dfa_count(bool minify = true) {
+  auto dfa = build(pattern.a, minify);
   auto c = std::make_tuple(dfa->Size(), dfa->chs.size());
   delete dfa;
   return c;
@@ -1236,11 +1426,11 @@ static constexpr std::size_t DefaultAlphabetSize = 128;
 
 // Compiled dfa in format of fixed-size arrays.
 // Check function Compile for more documentation.
-template <fixed_string pattern, bool pre_index = false,
+template <fixed_string pattern, bool pre_index = false, bool minify = true,
           std::size_t AlphabetSize = DefaultAlphabetSize>
 class FixedDfa {
  private:
-  static constexpr auto Ns = dfa_count<pattern>();
+  static constexpr auto Ns = dfa_count<pattern>(minify);
   // Number of states.
   static constexpr auto NStates = std::get<0>(Ns);
   // Number of acceptable characters.
@@ -1268,7 +1458,7 @@ class FixedDfa {
 
  public:
   constexpr FixedDfa() {
-    auto dfa = build(pattern.a);
+    auto dfa = build(pattern.a, minify);
 
     std::array<uint8_t, AlphabetSize> tmp;  // index table
 
@@ -1370,19 +1560,19 @@ class FixedDfa {
 // pre_index indicates whether to build a static character index ahead, this
 // makes matching faster but uses more spaces.
 // AlphabetSize is the size of alphabet set to use.
-template <_::fixed_string pattern, bool pre_index = false,
+template <_::fixed_string pattern, bool pre_index = false, bool minify = true,
           std::size_t AlphabetSize = _::DefaultAlphabetSize>
-consteval _::FixedDfa<pattern, pre_index, AlphabetSize> Compile() {
-  return _::FixedDfa<pattern, pre_index, AlphabetSize>{};
+consteval auto Compile() {
+  return _::FixedDfa<pattern, pre_index, minify, AlphabetSize>{};
 }
 
 // Compile time DFA build and match.
 // Example usage:
 //  ctre::Match<"(a|b)*ab", "ababab">();
 template <_::fixed_string pattern, _::fixed_string s, bool pre_index = false,
-          std::size_t AlphabetSize = _::DefaultAlphabetSize>
+          bool minify = true, std::size_t AlphabetSize = _::DefaultAlphabetSize>
 consteval bool Match() {
-  auto dfa = _::build(pattern.a);
+  auto dfa = _::build(pattern.a, minify);
   std::string_view s1(s.a);
   auto result = dfa->Match(s1);
   delete dfa;
@@ -1409,10 +1599,10 @@ consteval bool Match() {
 //  // Compile time DFA build and runtime matching.
 //  std::string s1;
 //  ctre::Match<"(a|b)*ab">(s1);
-template <_::fixed_string pattern, bool pre_index = false,
+template <_::fixed_string pattern, bool pre_index = false, bool minify = true,
           std::size_t AlphabetSize = _::DefaultAlphabetSize>
 constexpr bool Match(std::string_view s) {
-  return Compile<pattern>().Match(s);
+  return Compile<pattern, pre_index, AlphabetSize, minify>().Match(s);
 }
 
 // Match a given string s by regular expression pattern.
@@ -1423,8 +1613,9 @@ constexpr bool Match(std::string_view s) {
 //
 //  // Compile time DFA build and compile time matching.
 //  constexpr auto b = ctre::Match("(a|b)*ab", "ababab")
-constexpr bool Match(std::string_view pattern, std::string_view s) {
-  auto dfa = _::build(pattern);
+constexpr bool Match(std::string_view pattern, std::string_view s,
+                     bool minify = true) {
+  auto dfa = _::build(pattern, minify);
   auto b = dfa->Match(s);
   delete dfa;
   return b;
