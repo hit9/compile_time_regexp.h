@@ -6,6 +6,7 @@
 #define __COMPILETIME_REGEXP_H__
 
 #include <algorithm>  // for std::copy_n, std::fill, std::sort, std::max, std::swap
+#include <array>      // for std::array
 #include <cstdlib>           // for std::size_t
 #include <initializer_list>  // for std::initializer_list
 #include <string>            // for std::string
@@ -1348,6 +1349,8 @@ class DfaMinifier {
     dfa->start = d[GroupOf(dfa->start)];
     dfa->states.swap(*new_states);
 
+    // Free old states (has been swapped into new_states).
+    for (auto st : *new_states) delete st;
     delete new_states;
   }
 
@@ -1383,7 +1386,7 @@ class DfaMinifier {
       InitGroupSet();
       while (Refine())
         ;
-      // RewriteDfa();
+      RewriteDfa();
     }
 
     if (original_size != dfa->Size()) RewriteDfaChs();
