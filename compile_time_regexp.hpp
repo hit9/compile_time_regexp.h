@@ -918,8 +918,11 @@ class DfaState : public State {
       : State(id, is_end), no(no){};
   constexpr uint16_t No() const { return no; }
   constexpr Table &Transitions() { return transitions; };
-  constexpr DfaState *Next(C c) { return transitions.get(c); }
-  constexpr bool HasTransition(C c) { return transitions.has(c); }
+  constexpr DfaState *Next(C c) {
+    auto p = transitions.getp(c);
+    if (p == nullptr) return nullptr;
+    return *p;
+  }
   constexpr void AddTransition(C c, DfaState *to) { transitions[c] = to; }
 
  private:
@@ -949,9 +952,10 @@ class Dfa {
   // Match a given string.
   constexpr bool Match(std::string_view s) {
     auto st = start;
-    for (auto &c : s) {
-      if (!st->HasTransition(c)) return false;
-      st = st->Next(c);
+    for (auto c : s) {
+      auto to = st->Next(c);
+      if (to == nullptr) return false;
+      st = to;
     }
     return st->IsEnd();
   }
@@ -1233,7 +1237,7 @@ class DfaMinifier {
     auto g1 = NewGroup(std::move(*ends));
     delete ends;
 
-    // Others goes to a group.
+    // Others goes to another group.
     auto others = new DfaState::PtrSet;
     dfa->states.sub(g1->Set(), *others);
     auto g2 = NewGroup(std::move(*others));
@@ -1256,13 +1260,11 @@ class DfaMinifier {
       for (auto b : g->Set()) {
         // Check if b.id equals a.id
         if (*b != *a) {
-          if (b->HasTransition(c)) {
-            // tb is the target state of b through transition character c.
-            auto tb = b->Next(c);
-            if (*GroupOf(ta) != *GroupOf(tb)) {
-              // The groups of states ta and tb are different.
-              x->add(b);
-            }
+          // tb is the target state of b through transition character c.
+          auto tb = b->Next(c);
+          if (tb == nullptr || *GroupOf(ta) != *GroupOf(tb)) {
+            // The groups of states ta and tb are different.
+            x->add(b);
           }
         }
       }
@@ -1277,7 +1279,7 @@ class DfaMinifier {
       return nullptr;
     }
 
-    // Returns a new group, it will eventually add to gs.
+    // Returns a new group, it will eventually be added to gs.
     auto g2 = NewGroup(std::move(*x));
     delete x;
     return g2;
@@ -1319,8 +1321,8 @@ class DfaMinifier {
   // Finally constructs new DfaState set and transition tables, rewrite the
   // original DFA.
   constexpr void RewriteDfa() {
-    // Mappings group => new dfat state.
-    map<DfaStateGroup *, DfaState *> d;
+    // Mappings group => new dfa state.
+    map<DfaStateGroup *, DfaState *> m;
 
     // Sets of new states, will eventually swap into dfa.
     auto new_states = new DfaState::PtrSet;
@@ -1329,7 +1331,7 @@ class DfaMinifier {
     for (auto g : gs) {
       auto st = new DfaState(g->Id(), g->HasEndState(), new_states->size() + 1);
       new_states->add(st);
-      d[g] = st;
+      m[g] = st;
     }
 
     // Maintain the transitions.
@@ -1338,18 +1340,18 @@ class DfaMinifier {
         for (auto p : s->Transitions()) {
           auto [c, t] = p;  // char, target state
           // Group of the target state.
-          auto gt = GroupOf(t);
-          auto st = d[gt];
-          d[g]->AddTransition(c, st);
+          auto g1 = GroupOf(t);
+          auto s1 = m.get(g1);
+          m[g]->AddTransition(c, s1);
         }
       }
     }
 
     // The group of start state is the new start state.
-    dfa->start = d[GroupOf(dfa->start)];
+    dfa->start = m[GroupOf(dfa->start)];
     dfa->states.swap(*new_states);
 
-    // Free old states (has been swapped into new_states).
+    // Free old dfa states (which has been swapped into new_states).
     for (auto st : *new_states) delete st;
     delete new_states;
   }
