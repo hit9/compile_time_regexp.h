@@ -61,9 +61,11 @@ Internal Brief
 
 Three main steps:
 
-- `NfaParser` - Parse a given pattern string to NFA.
+- `NfaParser` - Parse a given pattern string to NFA via dijkstra two stack algorithm..
 - `DfaBuilder` - Build a DFA from given NFA via [subset-construction](https://en.wikipedia.org/wiki/Powerset_construction).
 - `DfaMinifier` - Minify a DFA to an equivalent DFA that has a minimum number of states via [hopcroft alogrithm](https://en.wikipedia.org/wiki/DFA_minimization#Hopcroft's_algorithm).
+
+Chinese blog, 中文博客 - [实现一个简单的正则表达式引擎](https://writings.sh/post/regexp)
 
 License
 -------
