@@ -1,14 +1,15 @@
 compile_time_regexp.hpp
 =======================
 
-Compile time regular expression for C++20.
+A simple single-header library  for C++20,
+supports compile time regular expression with simple syntax supports.
 
 Source
 -----
 
-Single header file - [compile_time_regexp.hpp](compile_time_regexp.hpp).
+Single header file - [compile_time_regexp.hpp](compile_time_regexp.hpp)
 
-Tested compilers (`-std=c++20`):
+Tested compilers, with flag `-std=c++20`:
 
 - clang 16+
 - gcc 13+
@@ -54,6 +55,16 @@ cmake -S . -B build
 make -C build
 ./build/tests/tests
 ```
+
+
+Internal Brief
+--------------
+
+Three main steps:
+
+- `NfaParser` - Parse a given pattern string to NFA.
+- `DfaBuilder` - Build a DFA from given NFA via [subset-construction](https://en.wikipedia.org/wiki/Powerset_construction).
+- `DfaMinifier` - Minify a DFA to an equivalent DFA that has a minimum number of states via [hopcroft alogrithm](https://en.wikipedia.org/wiki/DFA_minimization#Hopcroft's_algorithm).
 
 License
 -------
