@@ -6,7 +6,7 @@ Simple compile time regular expression for C++20.
 Source
 -----
 
-Single header file - [compile_time_regexp.hpp](compile_time_regexp.hpp)
+Single header file - [compile_time_regexp.hpp](compile_time_regexp.hpp), without dependencies.
 
 Tested compilers, with flag `-std=c++20`:
 
