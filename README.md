@@ -1,7 +1,7 @@
 compile_time_regexp.hpp
 =======================
 
-Simple compile time regular expression for C++20.
+Simple compile time DFA based regular expression for C++20.
 
 Source
 -----
@@ -61,7 +61,7 @@ Internal Brief
 
 Three main steps:
 
-- `NfaParser` - Parse a given pattern string to NFA via dijkstra two stack algorithm..
+- `NfaParser` - Parse a given pattern string to NFA via dijkstra two stack algorithm.
 - `DfaBuilder` - Build a DFA from given NFA via [subset-construction](https://en.wikipedia.org/wiki/Powerset_construction).
 - `DfaMinifier` - Minify a DFA to an equivalent DFA that has a minimum number of states via [hopcroft alogrithm](https://en.wikipedia.org/wiki/DFA_minimization#Hopcroft's_algorithm).
 
