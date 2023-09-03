@@ -176,6 +176,7 @@ TEST_CASE("unique_queue", "[unique_queue compiltime test]") {
     if (q.pop() != 1) return false;
     if (q.size() != 2) return false;
     if (q.has(1)) return false;
+    if (q.front() != 2) return false;
     return true;
   };
   REQUIRE(f() == true);
