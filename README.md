@@ -1,8 +1,7 @@
 compile_time_regexp.hpp
 =======================
 
-A simple single-header library  for C++20,
-supports compile time regular expression with simple syntax supports.
+Simple compile time regular expression for C++20.
 
 Source
 -----
