@@ -15,10 +15,6 @@
 #include <utility>           // for std::move
 #include <vector>            // for std::vector
 
-#ifdef DEBUG
-#include "ctp/ctp.hpp"
-#endif
-
 // Compile time regular expression engine.
 namespace ctre {
 namespace _ {
