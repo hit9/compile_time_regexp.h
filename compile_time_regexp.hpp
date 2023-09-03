@@ -1,6 +1,6 @@
 // Copyright (c) Chao Wang, hit9@icloud.com, 2023.
 // Compile time regular expression engine.
-// https://github.com/hit9/compile_time_regexp.hpp/tree/master
+// https://github.com/hit9/compile_time_regexp.hpp
 // vim: foldmethod=marker foldenable
 
 #ifndef __COMPILETIME_REGEXP_H__
