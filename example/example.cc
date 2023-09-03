@@ -20,5 +20,5 @@ int main(void) {
 
   // All true.
   std::cout << std::boolalpha << b << b1 << b2 << b3 << std::endl;
-  return b;
+  return 0;
 }
