@@ -3,25 +3,22 @@
 #include "compile_time_regexp.hpp"
 
 int main(void) {
+  // Compile-time DFA build.
+  constexpr auto dfa = ctre::Compile<"(a|b)*ab">();
+  // Runtime matching.
+  auto b = dfa.Match("ababab");
+
   // Runtime DFA build and matching.
-  std::cout << ctre::Match("(a|b)*ab", "ababab") << std::endl;
+  auto b1 = ctre::Match("(a|b)*ab", "ababab");
 
   // Compile-time DFA build and matching.
-  constexpr auto b1 = ctre::Match("(a|b)*ab", "ababab");
-  std::cout << b1 << std::endl;
+  // Compile faster than: ctre::Compile<pattern>().Match(s);
+  constexpr auto b2 = ctre::Match("(a|b)*ab", "ababab");
 
   // Compile-time DFA build and matching.
-  auto b2 = ctre::Match<"(a|b)*ab", "ababab">();
-  std::cout << b2 << std::endl;
+  auto b3 = ctre::Match<"(a|b)*ab", "ababab">();
 
-  // Compile-time DFA build and runtime matching.
-  auto dfa = ctre::Compile<"(a|b)*ab">();
-  auto b3 = dfa.Match("ababab");
-  std::cout << b3 << std::endl;
-
-  // Compile-time DFA build and matching.
-  constexpr auto dfa1 = ctre::Compile<"(a|b)*ab">();
-  constexpr auto b4 = dfa1.Match("ababab");
-  std::cout << b4 << std::endl;
-  return 0;
+  // All true.
+  std::cout << std::boolalpha << b << b1 << b2 << b3 << std::endl;
+  return b;
 }

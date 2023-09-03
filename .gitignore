@@ -3,3 +3,4 @@ build
 .clang
 .cache
 .env
+*.s

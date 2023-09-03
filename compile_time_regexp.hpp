@@ -1579,7 +1579,7 @@ class FixedDfa {
 // Example usage:
 //
 //  // Compile time build.
-//  auto dfa = ctre::Compile<"(a|b)*ab">();
+//  constexpr auto dfa = ctre::Compile<"(a|b)*ab">();
 //
 //  // Runtime matching.
 //  dfa.Match("ababab");
