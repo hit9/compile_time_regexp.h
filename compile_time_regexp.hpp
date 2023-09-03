@@ -363,14 +363,8 @@ struct hash<set<T>> {
     std::vector<T> vs;
     for (auto v : s) vs.push_back(v);
     std::sort(vs.begin(), vs.end());
-
     // hash
-    uint32_t h = 0x811c9dc5;
-    for (auto i = 0; i < vs.size(); i++) {
-      h *= 16777619;
-      h ^= vs[i];
-    }
-    return h;
+    return hash<decltype(vs)>{}(vs);
   };
 };
 

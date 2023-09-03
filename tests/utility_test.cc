@@ -163,3 +163,20 @@ TEST_CASE("set", "[set sub]") {
   };
   REQUIRE(f() == true);
 }
+
+TEST_CASE("unique_queue", "[unique_queue compiltime test]") {
+  auto f = []() constexpr {
+    ctre::_::unique_queue<int> q;
+    q.push(1);
+    q.push(2);
+    q.push(3);
+    q.push(2);
+    if (q.size() != 3) return false;
+    if (!q.has(2)) return false;
+    if (q.pop() != 1) return false;
+    if (q.size() != 2) return false;
+    if (q.has(1)) return false;
+    return true;
+  };
+  REQUIRE(f() == true);
+}
