@@ -1101,7 +1101,7 @@ class DfaBuilder {
         set<C> chs;
         for (auto p : transitions) chs.add(std::get<0>(p));
 
-        // For each non-epsilon transions.
+        // For each non-epsilon transitions.
         for (auto c : chs) {
           // Moving to another dfa state T.
           auto T = Move(S, c);
@@ -1502,6 +1502,23 @@ class FixedDfa {
 
     // Must release the dfa.
     delete dfa;
+  }
+
+  constexpr void swap(FixedDfa &d) {
+    chs.swap(d.chs);
+    ch_index_table.swap(d.ch_index_table);
+    for (auto i = 0; i < transitions.size(); i++)
+      transitions[i].swap(d.transitions[i]);
+    st_is_end_table.swap(d.st_is_end_table);
+  }
+
+  // Move constructor
+  constexpr FixedDfa(FixedDfa &&d) { swap(d); }
+
+  // Move assignment.
+  constexpr FixedDfa &operator=(FixedDfa &&d) {
+    if (this != &d) swap(d);
+    return *this;
   }
 
   // Returns the number of states.
