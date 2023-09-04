@@ -74,6 +74,17 @@ TEST_CASE("Compile", "[Compile time build and runtime match #4]") {
   REQUIRE(!d.Match("1.1.1"));
 }
 
+TEST_CASE("Compile", "[Compile time build and runtime match #5]") {
+  constexpr auto d =
+      ctre::Compile<"((simple)|(word))+">();
+  REQUIRE(d.Size() > 0);
+  REQUIRE(d.Match("simple"));
+  REQUIRE(d.Match("word"));
+  REQUIRE(!d.Match("bad"));
+  REQUIRE(!d.Match("test"));
+  REQUIRE(d.Match("simplewordsimpleword"));
+}
+
 TEST_CASE("Minify", "[Minify simple #1]") {
   constexpr auto d =
       ctre::Compile<"((\\+|\\-)[0-9])?[0-9]*(([0-9].)|(.[0-9]))?[0-9]*">();
