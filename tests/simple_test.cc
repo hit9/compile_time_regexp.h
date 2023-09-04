@@ -75,8 +75,7 @@ TEST_CASE("Compile", "[Compile time build and runtime match #4]") {
 }
 
 TEST_CASE("Compile", "[Compile time build and runtime match #5]") {
-  constexpr auto d =
-      ctre::Compile<"((simple)|(word))+">();
+  constexpr auto d = ctre::Compile<"((simple)|(word))+">();
   REQUIRE(d.Size() > 0);
   REQUIRE(d.Match("simple"));
   REQUIRE(d.Match("word"));
