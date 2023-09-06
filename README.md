@@ -55,6 +55,13 @@ make -C build
 ./build/tests/tests
 ```
 
+FAQ
+---
+
+1. Compiling with clang causes error: `constexpr evaluation hit maximum step limit; possible infinite loop?`
+
+   Try to increase value of option `-fconstexpr-steps`, e.g. `clang++ ./example/example.cc -std=c++20  -O3 -fconstexpr-steps=1000000000 -I.`.
+
 
 Internal Brief
 --------------
