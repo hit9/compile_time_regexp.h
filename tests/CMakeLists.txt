@@ -10,16 +10,16 @@ include_directories("..")
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.4.0 # or a later release
-    GIT_PROGRESS TRUE
-    FIND_PACKAGE_ARGS NAMES Catch2)
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG v3.4.0 # or a later release
+  GIT_PROGRESS TRUE
+  FIND_PACKAGE_ARGS NAMES Catch2)
 
 FetchContent_MakeAvailable(Catch2)
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options(-fconstexpr-steps=1000000000)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-fconstexpr-steps=1000000000)
 endif()
 
 # Targets
