@@ -10,7 +10,7 @@ Single header file - [compile_time_regexp.hpp](compile_time_regexp.hpp), without
 
 Tested compilers, with flag `-std=c++20`:
 
-- clang 16+
+- clang 15+
 - gcc 13+
 
 Example
