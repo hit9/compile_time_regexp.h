@@ -131,7 +131,7 @@ class map {
     auto ob = b;
     b = new slot[new_cap]{};
     for (auto i = 0; i < cap; i++) {
-      auto &sl = ob[i];
+      const auto &sl = ob[i];
       if (sl.used) {
         for (auto j = 0; j < new_cap; j++) {
           auto &sl1 = b[j];
@@ -315,9 +315,9 @@ class set {
  public:
   constexpr set() {}
   constexpr set(std::initializer_list<T> vs) {
-    for (auto &v : vs) add(v);
+    for (const auto &v : vs) add(v);
   }
-  constexpr set(const set &o) { m = o.m; }
+  constexpr set(const set &o) : m(o.m) {}
   constexpr set &operator=(const set &o) {
     if (this != &o) m = o.m;
     return *this;
@@ -330,12 +330,12 @@ class set {
   constexpr bool has(const T &v) const { return m.has(v); }
   constexpr void pop(T v) { m.pop(v); }
   constexpr void merge(const set &o) {
-    for (auto &v : o) add(v);
+    for (const auto &v : o) add(v);
   }
   constexpr void swap(set &o) { m.swap(o.m); }
   // Copy elements in *this but not in set o to given set others.
   constexpr void sub(const set &o, set &others) const {
-    for (auto &v : *this)
+    for (const auto &v : *this)
       if (!o.has(v)) others.add(v);
   }
 
@@ -344,7 +344,7 @@ class set {
     map_iterator_t it;
 
    public:
-    constexpr iterator(map_iterator_t it) : it(it){};
+    constexpr explicit iterator(map_iterator_t it) : it(it){};
     constexpr T &operator*() const { return std::get<0>(*it); }
     constexpr iterator &operator++() {
       ++it;
@@ -361,7 +361,7 @@ struct hash<set<T>> {
   constexpr uint32_t operator()(const set<T> &s) const {
     // sort
     std::vector<T> vs;
-    for (auto v : s) vs.push_back(v);
+    for (auto v : s) vs.push_back(v);  // cppcheck-suppress useStlAlgorithm
     std::sort(vs.begin(), vs.end());
     // hash
     return hash<decltype(vs)>{}(vs);
@@ -387,11 +387,17 @@ class unique_queue {
   Node *last = nullptr;
   set<T, H> s;
   constexpr unique_queue() {
+    // cppcheck-suppress noCopyConstructor
+    // cppcheck-suppress noOperatorEq
     head = new Node();
     last = head;
   };
   constexpr ~unique_queue() noexcept {
-    while (!empty()) pop();
+    while (!empty()) try {
+        pop();
+      } catch (...) {
+        // Ignore pop's throw
+      };
     delete head;
   }
   constexpr std::size_t size() const { return s.size(); }
@@ -409,15 +415,15 @@ class unique_queue {
   // Pops the front data.
   constexpr T pop() {
     if (empty()) throw "empty q";
-    auto front = head->next;  // to delete
-    if (front->next != nullptr) front->next->prev = head;
-    head->next = front->next;
+    auto f = head->next;  // to delete
+    if (f->next != nullptr) f->next->prev = head;
+    head->next = f->next;
     // When there's only one node, the final last should be head itself.
-    if (front == last) last = head;
+    if (f == last) last = head;
     // Pops the data.
-    auto v = front->v;
+    auto v = f->v;
     s.pop(v);
-    delete front;
+    delete f;
     return v;
   }
   // Front returns the front.
@@ -433,6 +439,7 @@ template <std::size_t N>
 class fixed_string {
  public:
   char a[N];
+  // cppcheck-suppress noExplicitConstructor
   constexpr fixed_string(const char (&s)[N]) { std::copy_n(s, N, a); }
   constexpr std::size_t size() const { return N; }
   constexpr char operator[](int x) const { return a[x]; }
@@ -578,7 +585,7 @@ class NfaState : public State {
   // Add a transition via character c to given state.
   constexpr void AddTransition(C c, NfaState *to) {
     transitions[c].add(to);
-    if (is_end) is_end = false;
+    is_end = false;
   }
   // Is given character c is acceptable by this state?
   constexpr bool AcceptC(C c) const { return transitions.has(c); }
@@ -643,11 +650,11 @@ class NfaParser {
   }
 
   // Creates a nfa from a set of symbols.
-  constexpr Nfa *NewNfaFromSymbols(set<C> &chs) {
+  constexpr Nfa *NewNfaFromSymbols(const set<C> &chs) {
     auto start = NewState(false);
     auto end = NewState(true);
     if (!chs.empty()) {
-      for (auto &c : chs) {
+      for (const auto &c : chs) {
         start->AddTransition(c, end);
       }
     } else {
@@ -657,9 +664,9 @@ class NfaParser {
   }
 
   // Create a nfa from a set of ranges.
-  constexpr Nfa *NewNfaFromRanges(std::vector<range> &ranges) {
+  constexpr Nfa *NewNfaFromRanges(const std::vector<range> &ranges) {
     set<C> chs;
-    for (auto &range : ranges) {
+    for (const auto &range : ranges) {
       auto [start, end] = range;
       for (auto x = start; x <= end; x++) chs.add(x);
     }
@@ -789,7 +796,7 @@ class NfaParser {
     std::string s1;
     // Tracks wherther it's currently in a range.
     bool is_in_range = false;
-    for (auto &c : s) {
+    for (const auto &c : s) {
       if (IsAbleInsertConcat(c) && !s1.empty() &&
           !IsRightActingOperator(s1.back()) && !is_in_range) {
         s1.push_back(OP_CONCAT);
@@ -860,7 +867,7 @@ class NfaParser {
           // The start of current parsing range.
           C range_start = EPSILON;
 
-          while (s1[i] != OP_RANGE_END && i < s1.size()) {
+          while (i < s1.size() && s1[i] != OP_RANGE_END) {
             x = s1[i++];
             if (x != OP_RANGE_TO) {
               if (range_start == EPSILON)
@@ -927,7 +934,7 @@ class Dfa {
   DfaState *start = nullptr;
   DfaState::PtrSet states;
   set<C> chs;  // Acceptable characters.
-  constexpr Dfa(DfaState *start) : start(start){};
+  constexpr explicit Dfa(DfaState *start) : start(start){};
   constexpr ~Dfa() noexcept {
     for (auto st : states) delete st;
   }
@@ -998,7 +1005,7 @@ class DfaBuilder {
     // Find NfaStates can be reachable by non EPSILON transitions.
     for (auto &s : N) {
       for (auto p : s->Transitions()) {
-        auto &[c, sts] = p;
+        auto &[c, sts] = p;  // cppcheck-suppress variableScope
         if (c != EPSILON) {
           // Union
           d[id][c].merge(sts);
@@ -1017,14 +1024,14 @@ class DfaBuilder {
   constexpr void EpsilonClosure(NfaState::PtrSet &N) {
     // Push all nfa states in N to a stack.
     stack<NfaState *> stack;
-    for (auto &s : N) stack.push(s);
+    for (const auto &s : N) stack.push(s);
 
     // DFS walking.
     while (!stack.empty()) {
       auto s = stack.pop();
       // Find all reachable states via empty symbol EPSILON.
       if (!s->AcceptC(EPSILON)) continue;
-      for (auto &t : s->Nexts(EPSILON)) {
+      for (const auto &t : s->Nexts(EPSILON)) {
         if (!N.has(t)) {
           // If t is not in N, adds it, and pushes it to stack.
           N.add(t);
@@ -1064,7 +1071,7 @@ class DfaBuilder {
   };
 
  public:
-  constexpr DfaBuilder(const Nfa *nfa) : nfa(nfa){};
+  constexpr explicit DfaBuilder(const Nfa *nfa) : nfa(nfa){};
 
   // Build a Dfa from Nfa.
   // The created DFA must be released by outer code.
@@ -1122,11 +1129,11 @@ class DfaStateGroup {
   constexpr void init() { id = hash<DfaState::PtrSet>{}(s); }
 
  public:
-  constexpr DfaStateGroup(const DfaState::PtrSet &s)  // copy
+  constexpr explicit DfaStateGroup(const DfaState::PtrSet &s)  // copy
       : s(s) {
     init();
   };
-  constexpr DfaStateGroup(DfaState::PtrSet &&s1) {  // move
+  constexpr explicit DfaStateGroup(DfaState::PtrSet &&s1) {  // move
     s.swap(s1);
     init();
   };
@@ -1163,7 +1170,7 @@ class DfaMinifier {
   // DfaState Id => DfaStateGroup
   map<uint32_t, DfaStateGroup *> d;
 
-  constexpr void RemoveStates(DfaState::PtrSet &removings) {
+  constexpr void RemoveStates(const DfaState::PtrSet &removings) {
     for (auto st : removings) {
       dfa->states.pop(st);
       delete st;
@@ -1372,7 +1379,7 @@ class DfaMinifier {
   }
 
  public:
-  constexpr DfaMinifier(Dfa *dfa) : dfa(dfa){};
+  constexpr explicit DfaMinifier(Dfa *dfa) : dfa(dfa){};
   constexpr ~DfaMinifier() noexcept {
     for (auto g : gs) delete g;
   }
