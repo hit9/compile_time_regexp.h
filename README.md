@@ -1,4 +1,4 @@
-compile_time_regexp.hpp
+compile_time_regexp.h
 =======================
 
 Simple compile time DFA based regular expression for C++20.
@@ -6,7 +6,7 @@ Simple compile time DFA based regular expression for C++20.
 Source
 -----
 
-Single header file - [compile_time_regexp.hpp](compile_time_regexp.hpp), without dependencies.
+Single header file - [compile_time_regexp.h](compile_time_regexp.h), without dependencies.
 
 Tested compilers, with flag `-std=c++20`:
 
