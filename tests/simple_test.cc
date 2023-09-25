@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "compile_time_regexp.hpp"
+#include "compile_time_regexp.h"
 
 TEST_CASE("Match", "[Compile time match #1]") {
   constexpr auto b1 = ctre::Match<"(a|b)*ab", "abababab">();

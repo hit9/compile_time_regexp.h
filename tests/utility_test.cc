@@ -3,7 +3,7 @@
 #include <numeric>
 #include <tuple>
 
-#include "compile_time_regexp.hpp"
+#include "compile_time_regexp.h"
 
 template <>
 struct ctre::_::hash<int> {

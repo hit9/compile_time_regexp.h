@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "compile_time_regexp.hpp"
+#include "compile_time_regexp.h"
 
 int main(void) {
   // Compile-time DFA build.
