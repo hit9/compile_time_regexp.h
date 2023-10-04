@@ -43,7 +43,7 @@ struct hash<char> {
   constexpr uint32_t operator()(char v) const {
     char s[1] = {v};
     return fnv32(s, 1);
-  };
+  }
 };
 
 template <>
@@ -55,7 +55,7 @@ struct hash<uint32_t> {
     s[1] = (v >> 8) & 0xff;
     s[0] = v & 0xff;
     return fnv32(s, 4);
-  };
+  }
 };
 
 template <>
@@ -67,7 +67,7 @@ struct hash<std::vector<uint32_t>> {
       h ^= v[i];
     }
     return h;
-  };
+  }
 };
 // hash functions. }}}
 
@@ -78,7 +78,7 @@ class stack {
   std::vector<T> a;
 
  public:
-  constexpr stack(){};
+  constexpr stack() {}
   constexpr std::size_t size() const { return a.size(); }
   constexpr bool empty() const { return a.empty(); }
   // Returns the reference to stack top.
@@ -219,7 +219,7 @@ class map {
       }
     }
     return false;
-  };
+  }
 
   // Gets a value by key.
   // Throws if the key is not found.
@@ -268,7 +268,7 @@ class map {
     slot *end = nullptr;
 
    public:
-    constexpr iterator(){};
+    constexpr iterator() {}
     constexpr iterator(slot *q, slot *e) : p(q), end(e) {
       // Seeks to the first used slot.
       while (p != nullptr && p != end && !p->used) p++;
@@ -285,7 +285,7 @@ class map {
       } while (p != end && !p->used);
       return *this;
     }
-    constexpr bool operator!=(const iterator &o) { return p != o.p; };
+    constexpr bool operator!=(const iterator &o) { return p != o.p; }
   };
 
   // Returns the iterator at begin.
@@ -344,13 +344,13 @@ class set {
     map_iterator_t it;
 
    public:
-    constexpr explicit iterator(map_iterator_t it) : it(it){};
+    constexpr explicit iterator(map_iterator_t it) : it(it) {}
     constexpr T &operator*() const { return std::get<0>(*it); }
     constexpr iterator &operator++() {
       ++it;
       return *this;
     }
-    constexpr bool operator!=(const iterator &o) { return it != o.it; };
+    constexpr bool operator!=(const iterator &o) { return it != o.it; }
   };
   constexpr iterator begin() const { return iterator(m.begin()); }
   constexpr iterator end() const { return iterator(m.end()); }
@@ -365,7 +365,7 @@ struct hash<set<T>> {
     std::sort(vs.begin(), vs.end());
     // hash
     return hash<decltype(vs)>{}(vs);
-  };
+  }
 };
 
 // set }}}
@@ -378,8 +378,8 @@ class unique_queue {
     T v;
     Node *next = nullptr;
     Node *prev = nullptr;
-    constexpr Node(){};
-    constexpr Node(T v, Node *prev) : v(v), next(nullptr), prev(prev){};
+    constexpr Node() {}
+    constexpr Node(T v, Node *prev) : v(v), next(nullptr), prev(prev) {}
   };
 
  public:
@@ -391,13 +391,13 @@ class unique_queue {
     // cppcheck-suppress noOperatorEq
     head = new Node();
     last = head;
-  };
+  }
   constexpr ~unique_queue() noexcept {
     while (!empty()) try {
         pop();
       } catch (...) {
         // Ignore pop's throw
-      };
+      }
     delete head;
   }
   constexpr std::size_t size() const { return s.size(); }
@@ -500,7 +500,7 @@ constexpr static int GetOperatorPriority(Op op) {
       return 2;
     default:
       return 0;
-  };
+  }
 }
 
 // Is given character has effects on right hand.
@@ -550,10 +550,10 @@ class State {
   bool is_end;
 
  public:
-  constexpr State() : id(0), is_end(false){};
-  constexpr State(uint32_t id, bool is_end) : id(id), is_end(is_end){};
-  constexpr uint32_t Id() const { return id; };
-  constexpr bool IsEnd() const { return is_end; };
+  constexpr State() : id(0), is_end(false) {}
+  constexpr State(uint32_t id, bool is_end) : id(id), is_end(is_end) {}
+  constexpr uint32_t Id() const { return id; }
+  constexpr bool IsEnd() const { return is_end; }
   friend constexpr bool operator==(const State &a, const State &b) {
     return a.Id() == b.Id();
   }
@@ -566,7 +566,7 @@ template <>
 struct hash<State *> {
   constexpr uint32_t operator()(State *st) const {
     return hash<uint32_t>{}(st->Id());
-  };
+  }
 };
 // State }}}
 
@@ -579,9 +579,9 @@ class NfaState : public State {
   // Transition table: character => NfaState poniters.
   using Table = map<C, PtrSet>;
 
-  constexpr NfaState() : State(){};
-  constexpr NfaState(int id, bool is_end) : State(id, is_end){};
-  constexpr Table &Transitions() { return transitions; };
+  constexpr NfaState() : State() {}
+  constexpr NfaState(int id, bool is_end) : State(id, is_end) {}
+  constexpr Table &Transitions() { return transitions; }
   // Add a transition via character c to given state.
   constexpr void AddTransition(C c, NfaState *to) {
     transitions[c].add(to);
@@ -590,7 +590,7 @@ class NfaState : public State {
   // Is given character c is acceptable by this state?
   constexpr bool AcceptC(C c) const { return transitions.has(c); }
   // Returns the target states reaches through given character.
-  constexpr PtrSet &Nexts(C c) { return transitions.get(c); };
+  constexpr PtrSet &Nexts(C c) { return transitions.get(c); }
 
  private:
   Table transitions;
@@ -605,7 +605,7 @@ struct hash<NfaState::PtrSet> {
     // And it's no need to implement a hash<set<State*>>.
     for (auto &p : s) s1.add(p->Id());
     return hash<decltype(s1)>{}(s1);
-  };
+  }
 };
 
 class Nfa {
@@ -613,9 +613,9 @@ class Nfa {
   NfaState *start = nullptr;
   NfaState *end = nullptr;
   std::size_t size = 0;
-  constexpr Nfa(){};
+  constexpr Nfa() {}
   constexpr Nfa(NfaState *start, NfaState *end, std::size_t size)
-      : start(start), end(end), size(size){};
+      : start(start), end(end), size(size) {}
 };
 
 // NfaParser parses Nfa from regular expression.
@@ -870,9 +870,9 @@ class NfaParser {
           while (i < s1.size() && s1[i] != OP_RANGE_END) {
             x = s1[i++];
             if (x != OP_RANGE_TO) {
-              if (range_start == EPSILON)
+              if (range_start == EPSILON) {
                 range_start = x;
-              else {
+              } else {
                 ranges.push_back(std::make_pair(range_start, x));
                 range_start = EPSILON;
               }
@@ -913,9 +913,9 @@ class DfaState : public State {
   using Table = map<C, DfaState *>;
 
   constexpr DfaState(int id, bool is_end, uint16_t no)
-      : State(id, is_end), no(no){};
+      : State(id, is_end), no(no) {}
   constexpr uint16_t No() const { return no; }
-  constexpr Table &Transitions() { return transitions; };
+  constexpr Table &Transitions() { return transitions; }
   constexpr DfaState *Next(C c) {
     auto p = transitions.getp(c);
     if (p == nullptr) return nullptr;
@@ -934,12 +934,12 @@ class Dfa {
   DfaState *start = nullptr;
   DfaState::PtrSet states;
   set<C> chs;  // Acceptable characters.
-  constexpr explicit Dfa(DfaState *start) : start(start){};
+  constexpr explicit Dfa(DfaState *start) : start(start) {}
   constexpr ~Dfa() noexcept {
     for (auto st : states) delete st;
   }
   // Does this dfa contain given state s?
-  constexpr bool Has(DfaState *s) const { return states.has(s); };
+  constexpr bool Has(DfaState *s) const { return states.has(s); }
   // Returns the number of states.
   constexpr std::size_t Size() const { return states.size(); }
   // Add a new state to the dfa at dfa build time.
@@ -965,7 +965,7 @@ struct hash<DfaState::PtrSet> {
     set<uint32_t> s1;
     for (auto &p : s) s1.add(p->Id());
     return hash<decltype(s1)>{}(s1);
-  };
+  }
 };
 
 // DfaBuilder builds a dfa from nfa.
@@ -1039,7 +1039,7 @@ class DfaBuilder {
         }
       }
     }
-  };
+  }
 
   // Returns the target DfaState reaches by character c from state S.
   constexpr DfaState *Move(const DfaState *S, C c) {
@@ -1068,10 +1068,10 @@ class DfaBuilder {
     // Sets result to cache.
     epsilon_closure_cache.set(kid, id);
     return states.get(id);
-  };
+  }
 
  public:
-  constexpr explicit DfaBuilder(const Nfa *nfa) : nfa(nfa){};
+  constexpr explicit DfaBuilder(const Nfa *nfa) : nfa(nfa) {}
 
   // Build a Dfa from Nfa.
   // The created DFA must be released by outer code.
@@ -1113,7 +1113,7 @@ class DfaBuilder {
       dfa->AddState(S);
     }
     return dfa;
-  };
+  }
 };
 
 // DfaBuilder }}}
@@ -1132,11 +1132,11 @@ class DfaStateGroup {
   constexpr explicit DfaStateGroup(const DfaState::PtrSet &s)  // copy
       : s(s) {
     init();
-  };
+  }
   constexpr explicit DfaStateGroup(DfaState::PtrSet &&s1) {  // move
     s.swap(s1);
     init();
-  };
+  }
   constexpr uint32_t Id() const { return id; }
   constexpr DfaState::PtrSet &Set() { return s; }
   constexpr bool operator==(const DfaStateGroup &o) const { return o.id == id; }
@@ -1174,7 +1174,7 @@ class DfaMinifier {
     for (auto st : removings) {
       dfa->states.pop(st);
       delete st;
-    };
+    }
   }
 
   // Remove dead states: those non-end and having no out transitions states.
@@ -1379,7 +1379,7 @@ class DfaMinifier {
   }
 
  public:
-  constexpr explicit DfaMinifier(Dfa *dfa) : dfa(dfa){};
+  constexpr explicit DfaMinifier(Dfa *dfa) : dfa(dfa) {}
   constexpr ~DfaMinifier() noexcept {
     for (auto g : gs) delete g;
   }
@@ -1392,8 +1392,8 @@ class DfaMinifier {
 
     if (dfa->Size() > 1) {
       InitGroupSet();
-      while (Refine())
-        ;
+      while (Refine()) {
+      }
       RewriteDfa();
     }
 
@@ -1526,9 +1526,9 @@ class FixedDfa {
   constexpr bool Match(std::string_view s) const {
     // Index table.
     uint8_t *t = nullptr;
-    if (pre_index)
+    if (pre_index) {
       t = const_cast<uint8_t *>(&ch_index_table[0]);
-    else {
+    } else {
       t = new uint8_t[AlphabetSize];
       for (auto i = 0; i < AlphabetSize; i++) t[i] = 0;
       for (auto i = 0; i < chs.size(); i++) t[chs[i] % AlphabetSize] = i + 1;
