@@ -4,3 +4,5 @@ build
 .cache
 .env
 *.s
+ctp
+Testing

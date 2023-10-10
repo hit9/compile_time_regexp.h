@@ -4,6 +4,8 @@ project(compile_time_regexp_test CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+enable_testing()
+
 include_directories("..")
 
 # Find or Download package Catch 2
@@ -17,6 +19,7 @@ FetchContent_Declare(
   FIND_PACKAGE_ARGS NAMES Catch2)
 
 FetchContent_MakeAvailable(Catch2)
+list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-fconstexpr-steps=1000000000)
@@ -26,3 +29,13 @@ endif()
 add_executable(tests simple_test.cc utility_test.cc)
 
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+
+add_custom_target(
+  runtests
+  COMMAND tests
+  DEPENDS tests
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+include(CTest)
+include(Catch)
+catch_discover_tests(tests)
