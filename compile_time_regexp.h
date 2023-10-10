@@ -9,6 +9,7 @@
 #include <algorithm>  // for std::copy_n, std::fill, std::sort, std::max, std::swap
 #include <array>      // for std::array
 #include <cstdlib>           // for std::size_t
+#include <cstdint> // for uint32_t
 #include <initializer_list>  // for std::initializer_list
 #include <string>            // for std::string
 #include <string_view>       // for std::string_view
