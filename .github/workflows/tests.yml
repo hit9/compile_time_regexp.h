@@ -37,6 +37,9 @@ jobs:
         sudo ./llvm.sh 17
         sudo ln -sf /usr/bin/clang-17 /usr/bin/clang
         sudo ln -sf /usr/bin/clang++-17 /usr/bin/clang++
+        wget https://gist.githubusercontent.com/junkdog/70231d6953592cd6f27def59fe19e50d/raw/update-alternatives-clang.sh
+        chmod +x update-alternatives-clang.sh
+        sudo ./update-alternatives-clang.sh 17 1000
 
     - name: Install GCC 13
       if: ${{ (matrix.os == 'ubuntu-latest') && (matrix.cpp_compiler == 'g++')}}
