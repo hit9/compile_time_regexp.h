@@ -39,6 +39,7 @@ jobs:
         sudo ln -sf /usr/bin/clang++-17 /usr/bin/clang++
         sudo ln -sf /usr/bin/llvm-config-17 /usr/bin/llvm-config
         clang++ -v
+        clang++ -E -xc++ - -v -std=c++20
 
     - name: Install GCC 13
       if: ${{ (matrix.os == 'ubuntu-latest') && (matrix.cpp_compiler == 'g++')}}
