@@ -3,6 +3,8 @@ compile_time_regexp.h
 
 Simple compile time DFA based regular expression for C++20.
 
+[![compile_time_regexp.h tests](https://github.com/hit9/compile_time_regexp.h/actions/workflows/tests.yml/badge.svg)](https://github.com/hit9/compile_time_regexp.h/actions/workflows/tests.yml)
+
 Source
 -----
 
