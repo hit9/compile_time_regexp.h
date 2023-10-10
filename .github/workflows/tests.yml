@@ -27,15 +27,36 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Install LLVM 17
+      if: ${{ (matrix.os == 'ubuntu-latest') && (matrix.cpp_compiler == 'clang++')}}
+      run: |
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 17
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-17 100
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-17 100
+
+    - name: Install GCC 13
+      if: ${{ (matrix.os == 'ubuntu-latest') && (matrix.cpp_compiler == 'g++')}}
+      run: |
+        sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa -y
+        sudo apt update
+        sudo apt install g++-13 gcc-13 -y
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
 
     - name: Configure CMake
       working-directory: ${{runner.workspace}}/build
+      env:
+        CC: ${{ matrix.c_compiler }}
+        CXX: ${{ matrix.cpp_compiler }}
       run: >
         cmake -B . -S ${{ github.workspace }}
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DBUILD_TESTS=1
 
@@ -43,6 +64,6 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       run: cmake --build . --config ${{ matrix.build_type }} --target tests
 
-    - name: Run mTest
+    - name: Run Test
       working-directory: ${{runner.workspace}}/build
       run: ctest --test-dir tests --config ${{ matrix.build_type }}
