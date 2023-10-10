@@ -35,6 +35,9 @@ jobs:
         sudo ./llvm.sh 17
         sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-17 100
         sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 100
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-17 100
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-17 100
+        sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-17 100
 
     - name: Install GCC 13
       if: ${{ (matrix.os == 'ubuntu-latest') && (matrix.cpp_compiler == 'g++')}}
@@ -50,9 +53,6 @@ jobs:
 
     - name: Configure CMake
       working-directory: ${{runner.workspace}}/build
-      env:
-        CC: ${{ matrix.c_compiler }}
-        CXX: ${{ matrix.cpp_compiler }}
       run: >
         cmake -B . -S ${{ github.workspace }}
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
