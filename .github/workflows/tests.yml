@@ -30,14 +30,13 @@ jobs:
     - name: Install LLVM 17
       if: ${{ (matrix.os == 'ubuntu-latest') && (matrix.cpp_compiler == 'clang++')}}
       run: |
+        sudo apt remove clang clang-14 clang-15
+        sudo apt autoremove
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
         sudo ./llvm.sh 17
-        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-17 100
-        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 100
-        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-17 100
-        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-17 100
-        sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-17 100
+        sudo ln -sf /usr/bin/clang-17 /usr/bin/clang
+        sudo ln -sf /usr/bin/clang++-17 /usr/bin/clang++
 
     - name: Install GCC 13
       if: ${{ (matrix.os == 'ubuntu-latest') && (matrix.cpp_compiler == 'g++')}}
