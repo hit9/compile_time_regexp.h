@@ -59,6 +59,7 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       run: >
         cmake -B . -S ${{ github.workspace }}
+        -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}

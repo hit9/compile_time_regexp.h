@@ -42,7 +42,7 @@ struct hash {
 template <>
 struct hash<char> {
   constexpr uint32_t operator()(char v) const {
-    char s[1] = {v};
+    const char s[1] = {v};
     return fnv32(s, 1);
   }
 };
@@ -565,7 +565,7 @@ class State {
 
 template <>
 struct hash<State *> {
-  constexpr uint32_t operator()(State *st) const {
+  constexpr uint32_t operator()(const State *st) const {
     return hash<uint32_t>{}(st->Id());
   }
 };
