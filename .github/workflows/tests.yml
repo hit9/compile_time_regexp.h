@@ -12,45 +12,25 @@ jobs:
 
     strategy:
       fail-fast: false
-
       matrix:
-        build_type: [Debug]
-        os: [ubuntu-latest]
-        cpp_compiler: [g++, clang++]
+        build_type: [Debug, Release]
+        os: [macos-latest, ubuntu-latest]
+        cpp_compiler: [g++-13, clang++]
         include:
           - os: ubuntu-latest
-            c_compiler: gcc
-            cpp_compiler: g++
-          - os: ubuntu-latest
+            c_compiler: gcc-13
+            cpp_compiler: g++-13
+          - os: macos-latest
             c_compiler: clang
             cpp_compiler: clang++
+        exclude:
+          - os: macos-latest
+            cpp_compiler: g++-13
+          - os: ubuntu-latest
+            cpp_compiler: clang++
+
     steps:
     - uses: actions/checkout@v3
-
-    - name: Install LLVM 17
-      if: ${{ (matrix.os == 'ubuntu-latest') && (matrix.cpp_compiler == 'clang++')}}
-      run: |
-        sudo apt remove clang clang-14 clang-15
-        sudo apt autoremove
-        wget https://apt.llvm.org/llvm.sh
-        chmod +x llvm.sh
-        sudo ./llvm.sh 17
-        sudo apt install libc++-17-dev libc++abi-17-dev
-        sudo ln -sf /usr/bin/clang-17 /usr/bin/clang
-        sudo ln -sf /usr/bin/clang++-17 /usr/bin/clang++
-        sudo ln -sf /usr/bin/llvm-config-17 /usr/bin/llvm-config
-        clang++ -v
-        clang++ -E -xc++ - -v -std=c++20
-
-    - name: Install GCC 13
-      if: ${{ (matrix.os == 'ubuntu-latest') && (matrix.cpp_compiler == 'g++')}}
-      run: |
-        sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa -y
-        sudo apt update
-        sudo apt install g++-13 gcc-13 -y
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
-        g++ -v
 
     - name: Install Conan
       run: pip install conan
