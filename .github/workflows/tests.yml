@@ -52,6 +52,19 @@ jobs:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
         g++ -v
 
+    - name: Install Conan
+      run: pip install conan
+
+    - name: Configure Conan
+      run: conan profile detect
+
+    - name: Install Requirements
+      run: >
+        conan install .
+        --output-folder=${{ runner.workspace }}/build
+        --build=missing -s compiler.cppstd=20
+        -s build_type=${{ matrix.build_type }}
+
     - name: Create Build Environment
       run: cmake -E make_directory ${{runner.workspace}}/build
 
