@@ -52,9 +52,9 @@ Run tests
 ---------
 
 ```bash
-cmake -S . -B build -DBUILD_TESTS=1
-cmake --build build --target tests
-ctest --test-dir ./build/tests
+make install-deps
+make build
+make tests
 ```
 
 FAQ
