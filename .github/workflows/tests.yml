@@ -64,4 +64,4 @@ jobs:
 
     - name: Run Test
       working-directory: ${{runner.workspace}}/build
-      run: ctest --test-dir tests --config ${{ matrix.build_type }}
+      run: ctest --test-dir tests  -D CMAKE_BUILD_TYPE=${{ matrix.build_type }}
